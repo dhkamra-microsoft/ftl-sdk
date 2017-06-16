@@ -56,61 +56,63 @@ static const unsigned __int64 epoch = ((unsigned __int64)116444736000000000ULL);
 */
 int gettimeofday(struct timeval * tp, struct timezone * tzp)
 {
-  FILETIME    file_time;
-  SYSTEMTIME  system_time;
-  ULARGE_INTEGER ularge;
+    FILETIME    file_time;
+    SYSTEMTIME  system_time;
+    ULARGE_INTEGER ularge;
 
-  GetSystemTime(&system_time);
-  SystemTimeToFileTime(&system_time, &file_time);
-  ularge.LowPart = file_time.dwLowDateTime;
-  ularge.HighPart = file_time.dwHighDateTime;
+    GetSystemTime(&system_time);
+    SystemTimeToFileTime(&system_time, &file_time);
+    ularge.LowPart = file_time.dwLowDateTime;
+    ularge.HighPart = file_time.dwHighDateTime;
 
-  tp->tv_sec = (long)((ularge.QuadPart - epoch) / 10000000L);
-  tp->tv_usec = (long)(system_time.wMilliseconds * 1000);
+    tp->tv_sec = (long)((ularge.QuadPart - epoch) / 10000000L);
+    tp->tv_usec = (long)(system_time.wMilliseconds * 1000);
 
-  return 0;
+    return 0;
 }
 #else
-void timespec_add_ms(struct timespec *ts, int ms) {
-  long ns_adjust;
-  time_t sec_adjust;
+void timespec_add_ms(struct timespec *ts, int ms)
+{
+    long ns_adjust;
+    time_t sec_adjust;
 
-  sec_adjust = MSEC_TO_SEC((time_t)ms);
-  ns_adjust = MSEC_TO_NSEC((long)ms);
+    sec_adjust = MSEC_TO_SEC((time_t)ms);
+    ns_adjust = MSEC_TO_NSEC((long)ms);
 
-  ns_adjust -= SEC_TO_NSEC((long)sec_adjust);
+    ns_adjust -= SEC_TO_NSEC((long)sec_adjust);
 
-  ts->tv_sec += sec_adjust;
-  ts->tv_nsec += ns_adjust;
+    ts->tv_sec += sec_adjust;
+    ts->tv_nsec += ns_adjust;
 
-  if(ts->tv_nsec >= NSEC_IN_SEC) {
-    ts->tv_nsec -= NSEC_IN_SEC;
-    ts->tv_sec++;
-  }
+    if (ts->tv_nsec >= NSEC_IN_SEC)
+    {
+        ts->tv_nsec -= NSEC_IN_SEC;
+        ts->tv_sec++;
+    }
 }
 #endif // _WIN32
 
 //result = end - start
 int timeval_subtract(struct timeval *result, const struct timeval *end, const struct timeval *start)
 {
-  int64_t differenceUs;
+    int64_t differenceUs;
 
-  differenceUs = timeval_subtract_to_us(end, start);
+    differenceUs = timeval_subtract_to_us(end, start);
 
-  // Get the number of seconds
-  result->tv_sec = USEC_TO_SEC(differenceUs);
-  
-  // Put the remainder NS into the second value.
-  result->tv_usec = differenceUs - SEC_TO_USEC(result->tv_sec);
+    // Get the number of seconds
+    result->tv_sec = USEC_TO_SEC(differenceUs);
 
-  /* Return 1 if result is negative. */
-  return differenceUs < 0;
+    // Put the remainder NS into the second value.
+    result->tv_usec = differenceUs - SEC_TO_USEC(result->tv_sec);
+
+    /* Return 1 if result is negative. */
+    return differenceUs < 0;
 }
 
 //result = end - start
 int64_t timeval_subtract_to_ms(const struct timeval *end, const struct timeval *start)
 {
-  return USEC_TO_MSEC(timeval_subtract_to_us(end, start));
+    return USEC_TO_MSEC(timeval_subtract_to_us(end, start));
 }
 
 int64_t timeval_subtract_to_us(const struct timeval *end, const struct timeval *start)
@@ -127,47 +129,57 @@ int64_t timeval_subtract_to_us(const struct timeval *end, const struct timeval *
 
 void timeval_add_ms(struct timeval *tv, int ms)
 {
-  timeval_add_us(tv, MSEC_TO_USEC(ms));
+    timeval_add_us(tv, MSEC_TO_USEC(ms));
 }
 
 void timeval_add_us(struct timeval *tv, uint64_t us)
 {
-  struct timeval add_timeval;
-  us_to_timeval(&add_timeval, us);
+    struct timeval add_timeval;
+    us_to_timeval(&add_timeval, us);
 
-  tv->tv_sec += add_timeval.tv_sec;
-  tv->tv_usec += add_timeval.tv_usec;
+    tv->tv_sec += add_timeval.tv_sec;
+    tv->tv_usec += add_timeval.tv_usec;
 
-  if (tv->tv_usec >= USEC_IN_SEC) {
-    tv->tv_usec -= USEC_IN_SEC;
-    tv->tv_sec++;
-  }
+    if (tv->tv_usec >= USEC_IN_SEC)
+    {
+        tv->tv_usec -= USEC_IN_SEC;
+        tv->tv_sec++;
+    }
 }
 
-float timeval_to_ms(struct timeval *tv) {
-  double sec, usec;
+float timeval_to_ms(struct timeval *tv)
+{
+    double sec, usec;
 
-  sec = (double)tv->tv_sec;
-  usec = (double)tv->tv_usec;
+    sec = (double)tv->tv_sec;
+    usec = (double)tv->tv_usec;
 
-  return (float)(sec * 1000 + usec / 1000);
+    return (float)(sec * 1000 + usec / 1000);
 }
 
 uint64_t timeval_to_us(struct timeval *tv)
 {
-  return tv->tv_sec * (uint64_t)1000000 + tv->tv_usec;
+    return tv->tv_sec * (uint64_t)1000000 + tv->tv_usec;
 }
 
-uint64_t timeval_to_ntp(struct timeval * tv) {
-  uint64_t ntpts;
+uint64_t timeval_to_ntp(struct timeval * tv)
+{
+    uint64_t ntpts;
 
-  ntpts = (((uint64_t)tv->tv_sec + 2208988800u) << 32) + ((uint32_t)tv->tv_usec * 4294.967296);
+    ntpts = (((uint64_t)tv->tv_sec + 2208988800u) << 32) + ((uint32_t)tv->tv_usec * 4294.967296);
 
-  return (ntpts);
+    return (ntpts);
 }
 
 void us_to_timeval(struct timeval *outputTimeVal, const int64_t inputTimeUs)
 {
-  outputTimeVal->tv_sec = USEC_TO_SEC(inputTimeUs);
-  outputTimeVal->tv_usec = inputTimeUs - SEC_TO_USEC(outputTimeVal->tv_sec);
+    outputTimeVal->tv_sec = USEC_TO_SEC(inputTimeUs);
+    outputTimeVal->tv_usec = inputTimeUs - SEC_TO_USEC(outputTimeVal->tv_sec);
+}
+
+int64_t get_ms_elapsed_since(struct timeval *tv)
+{
+    struct timeval now;
+    gettimeofday(&now, NULL);
+    return timeval_subtract_to_ms(&now, tv);
 }

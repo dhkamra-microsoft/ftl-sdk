@@ -1,26 +1,26 @@
 /**
- * \file ftl_private.h - Private Interfaces for the FTL SDK
- *
- * Copyright (c) 2015 Beam Inc.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- **/
+* \file ftl_private.h - Private Interfaces for the FTL SDK
+*
+* Copyright (c) 2015 Beam Inc.
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in
+* all copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
+**/
 
 #ifndef __FTL_PRIVATE_H
 #define __FTL_PRIVATE_H
@@ -89,29 +89,33 @@
 #define sscanf_s sscanf
 #endif
 
-typedef enum {
-  H264_NALU_TYPE_NON_IDR = 1,
-  H264_NALU_TYPE_IDR = 5,
-  H264_NALU_TYPE_SEI = 6,
-  H264_NALU_TYPE_SPS = 7,
-  H264_NALU_TYPE_PPS = 8,
-  H264_NALU_TYPE_DELIM = 9,
-  H264_NALU_TYPE_FILLER = 12
+typedef enum
+{
+    H264_NALU_TYPE_NON_IDR = 1,
+    H264_NALU_TYPE_IDR = 5,
+    H264_NALU_TYPE_SEI = 6,
+    H264_NALU_TYPE_SPS = 7,
+    H264_NALU_TYPE_PPS = 8,
+    H264_NALU_TYPE_DELIM = 9,
+    H264_NALU_TYPE_FILLER = 12
 }h264_nalu_type_t;
 
-typedef enum {
-  FTL_CONNECTED = 0x0001,
-  FTL_MEDIA_READY = 0x0002,
-  FTL_STATUS_QUEUE = 0x0004,
-  FTL_CXN_STATUS_THRD = 0x0008,
-  FTL_KEEPALIVE_THRD = 0x0010,
-  FTL_PING_THRD = 0x0020,
-  FTL_RX_THRD = 0x0040,
-  FTL_TX_THRD = 0x0080,
-  FTL_DISABLE_TX_PING_PKTS = 0x0100,
-  FTL_SPEED_TEST = 0x0200,
-  FTL_DISCONNECT_IN_PROGRESS = 0x1000,
-  FTL_DISABLE_TX_SENDER_REPORT = 0x2000
+typedef enum
+{
+    FTL_CONNECTED = 0x0001,
+    FTL_MEDIA_READY = 0x0002,
+    FTL_STATUS_QUEUE = 0x0004,
+    FTL_CXN_STATUS_THRD = 0x0008,
+    FTL_KEEPALIVE_THRD = 0x0010,
+    FTL_PING_THRD = 0x0020,
+    FTL_RX_THRD = 0x0040,
+    FTL_TX_THRD = 0x0080,
+    FTL_DISABLE_TX_PING_PKTS = 0x0100,
+    FTL_SPEED_TEST = 0x0200,
+    FTL_BITRATE_MONITOR_THREAD = 0x0400,
+    FTL_BITRATE_THRD = 0x0800,
+    FTL_DISCONNECT_IN_PROGRESS = 0x1000,
+    FTL_DISABLE_TX_SENDER_REPORT = 0x2000
 }ftl_state_t;
 
 #ifndef _WIN32
@@ -124,221 +128,245 @@ typedef bool BOOL;
 #endif
 
 /*status message queue*/
-typedef struct _status_queue_t {
-  ftl_status_msg_t stats_msg;
-  struct _status_queue_t *next;
+typedef struct _status_queue_t
+{
+    ftl_status_msg_t stats_msg;
+    struct _status_queue_t *next;
 }status_queue_elmt_t;
 
-typedef struct {
-  status_queue_elmt_t *head;
-  int count;
-  int thread_waiting;
-  OS_MUTEX mutex;
-  OS_SEMAPHORE sem;
+typedef struct
+{
+    status_queue_elmt_t *head;
+    int count;
+    int thread_waiting;
+    OS_MUTEX mutex;
+    OS_SEMAPHORE sem;
 }status_queue_t;
 
 /**
- * This configuration structure handles basic information for a struct such
- * as the authetication keys and other similar information. It's members are
- * private and not to be directly manipulated
- */
-typedef struct {
-  uint8_t packet[MAX_PACKET_BUFFER];
-  int len;
-  struct timeval insert_time;
-  struct timeval xmit_time;
-  int sn;
-  int first;/*first packet in frame*/
-  int last; /*last packet in frame*/
-  OS_MUTEX mutex;
+* This configuration structure handles basic information for a struct such
+* as the authetication keys and other similar information. It's members are
+* private and not to be directly manipulated
+*/
+typedef struct
+{
+    uint8_t packet[MAX_PACKET_BUFFER];
+    int len;
+    struct timeval insert_time;
+    struct timeval xmit_time;
+    int sn;
+    int first;/*first packet in frame*/
+    int last; /*last packet in frame*/
+    OS_MUTEX mutex;
 }nack_slot_t;
 
-typedef struct _ping_pkt_t {
-  uint32_t header;
-  struct timeval xmit_time;
+typedef struct _ping_pkt_t
+{
+    uint32_t header;
+    struct timeval xmit_time;
 }ping_pkt_t;
 
-typedef struct _senderReport_pkt_t {
-	uint32_t header;
-	uint32_t ssrc;
-	uint32_t ntpTimestampHigh;
-	uint32_t ntpTimestampLow;
-	uint32_t rtpTimestamp;
-	uint32_t senderPacketCount;
-	uint32_t senderOctetCount;
+typedef struct _senderReport_pkt_t
+{
+    uint32_t header;
+    uint32_t ssrc;
+    uint32_t ntpTimestampHigh;
+    uint32_t ntpTimestampLow;
+    uint32_t rtpTimestamp;
+    uint32_t senderPacketCount;
+    uint32_t senderOctetCount;
 }senderReport_pkt_t;
 
-typedef struct {
-  struct timeval start_time;
-  int64_t frames_received;
-  int64_t frames_sent;
-  int64_t bw_throttling_count;
-  int64_t bytes_queued;
-  int64_t packets_queued;
-  int64_t bytes_sent;
-  int64_t payload_bytes_sent;
-  int64_t packets_sent;
-  int64_t late_packets;
-  int64_t lost_packets;
-  int64_t nack_requests;
-  int64_t dropped_frames;
-  int pkt_xmit_delay_max;
-  int pkt_xmit_delay_min;
-  int total_xmit_delay;
-  int xmit_delay_samples;
-  int pkt_rtt_max;
-  int pkt_rtt_min;
-  int total_rtt;
-  int rtt_samples;
-  int current_frame_size;
-  int max_frame_size;
+typedef struct
+{
+    struct timeval start_time;
+    int64_t frames_received;
+    int64_t frames_sent;
+    int64_t bw_throttling_count;
+    int64_t bytes_queued;
+    int64_t packets_queued;
+    int64_t bytes_sent;
+    int64_t payload_bytes_sent;
+    int64_t packets_sent;
+    int64_t late_packets;
+    int64_t lost_packets;
+    int64_t nack_requests;
+    int64_t dropped_frames;
+    int pkt_xmit_delay_max;
+    int pkt_xmit_delay_min;
+    int total_xmit_delay;
+    int xmit_delay_samples;
+    int pkt_rtt_max;
+    int pkt_rtt_min;
+    int total_rtt;
+    int rtt_samples;
+    int current_frame_size;
+    int max_frame_size;
 }media_stats_t;
 
-typedef struct {
-  uint8_t payload_type;
-  uint32_t ssrc;
-  uint32_t timestamp;
-  int timestamp_clock;
-  uint64_t timestamp_dts_usec;
-  int64_t base_dts_usec;
-  int64_t randomOffset;
-  uint16_t seq_num;
-  uint16_t tmp_seq_num; // used for stats only
-  BOOL nack_enabled;
-  int64_t min_nack_rtt;
-  int64_t max_nack_rtt;
-  int64_t nack_rtt_avg;
-  BOOL nack_slots_initalized;
-  int producer;
-  int consumer;
-  uint16_t xmit_seq_num;
-  nack_slot_t *nack_slots[NACK_RB_SIZE];
-  OS_MUTEX nack_slots_lock;
-  int peak_kbps;
-  int kbps;
-  media_stats_t stats; //cumulative since start of stream
-  OS_SEMAPHORE pkt_ready;
+typedef struct
+{
+    uint8_t payload_type;
+    uint32_t ssrc;
+    uint32_t timestamp;
+    int timestamp_clock;
+    uint64_t timestamp_dts_usec;
+    int64_t base_dts_usec;
+    int64_t randomOffset;
+    uint16_t seq_num;
+    uint16_t tmp_seq_num; // used for stats only
+    BOOL nack_enabled;
+    int64_t min_nack_rtt;
+    int64_t max_nack_rtt;
+    int64_t nack_rtt_avg;
+    BOOL nack_slots_initalized;
+    int producer;
+    int consumer;
+    uint16_t xmit_seq_num;
+    nack_slot_t *nack_slots[NACK_RB_SIZE];
+    OS_MUTEX nack_slots_lock;
+    int peak_kbps;
+    int kbps;
+    media_stats_t stats; //cumulative since start of stream
+    OS_SEMAPHORE pkt_ready;
 }ftl_media_component_common_t;
 
-typedef struct {
-  ftl_audio_codec_t codec;
-  int64_t dts_usec;
-  ftl_media_component_common_t media_component;
-  OS_MUTEX mutex;
-  BOOL is_ready_to_send;
+typedef struct
+{
+    ftl_audio_codec_t codec;
+    int64_t dts_usec;
+    ftl_media_component_common_t media_component;
+    OS_MUTEX mutex;
+    BOOL is_ready_to_send;
 } ftl_audio_component_t;
 
-typedef struct {
-  ftl_video_codec_t codec;
-  uint32_t height;
-  uint32_t width;
-  int fps_num;
-  int fps_den;
-  int64_t dts_usec;
-  float dts_error;
-  uint8_t fua_nalu_type;
-  BOOL wait_for_idr_frame;
-  ftl_media_component_common_t media_component;
-  OS_MUTEX mutex;
-  BOOL has_sent_first_frame;
+typedef struct
+{
+    ftl_video_codec_t codec;
+    uint32_t height;
+    uint32_t width;
+    int fps_num;
+    int fps_den;
+    int64_t dts_usec;
+    float dts_error;
+    uint8_t fua_nalu_type;
+    BOOL wait_for_idr_frame;
+    ftl_media_component_common_t media_component;
+    OS_MUTEX mutex;
+    BOOL has_sent_first_frame;
 } ftl_video_component_t;
 
-typedef struct {
-  struct sockaddr_in server_addr;
-  SOCKET media_socket;
-  OS_MUTEX mutex;
-  int assigned_port;
-  OS_THREAD_HANDLE recv_thread;
-  OS_THREAD_HANDLE video_send_thread;
-  OS_THREAD_HANDLE audio_send_thread;
-  OS_THREAD_HANDLE ping_thread;
-  OS_SEMAPHORE ping_thread_shutdown;
-  int max_mtu;
-  struct timeval stats_tv;
-  int last_rtt_delay;
-  struct timeval sender_report_base_ntp;
+typedef struct
+{
+    struct sockaddr_in server_addr;
+    SOCKET media_socket;
+    OS_MUTEX mutex;
+    int assigned_port;
+    OS_THREAD_HANDLE recv_thread;
+    OS_THREAD_HANDLE video_send_thread;
+    OS_THREAD_HANDLE audio_send_thread;
+    OS_THREAD_HANDLE ping_thread;
+    OS_SEMAPHORE ping_thread_shutdown;
+    int max_mtu;
+    struct timeval stats_tv;
+    int last_rtt_delay;
+    struct timeval sender_report_base_ntp;
 } ftl_media_config_t;
 
-typedef struct _ftl_ingest_t {
-  char name[30];
-  char ip[IPV4_ADDR_ASCII_LEN];
-  int rtt;
-  struct _ftl_ingest_t *next;
+typedef struct _ftl_ingest_t
+{
+    char name[30];
+    char ip[IPV4_ADDR_ASCII_LEN];
+    int rtt;
+    struct _ftl_ingest_t *next;
 }ftl_ingest_t;
 
-typedef struct {
-  SOCKET ingest_socket;
-  ftl_state_t state;
-  OS_MUTEX state_mutex;
-  OS_MUTEX disconnect_mutex;
-  char *ingest_hostname;
-  char ingest_ip[IPV4_ADDR_ASCII_LEN];//ipv4 only
-  uint32_t channel_id;
-  char *key;
-  char hmacBuffer[512];
-  int video_kbps;
-  char vendor_name[20];
-  char vendor_version[20];
-  OS_THREAD_HANDLE connection_thread;
-  OS_THREAD_HANDLE keepalive_thread;
-  OS_SEMAPHORE connection_thread_shutdown;
-  OS_SEMAPHORE keepalive_thread_shutdown;
-  ftl_media_config_t media;
-  ftl_audio_component_t audio;
-  ftl_video_component_t video;
-  status_queue_t status_q;
-  ftl_ingest_t *ingest_list;
-  int ingest_count;
+typedef struct
+{
+    ftl_handle_t* handle;
+    BOOL(*change_bitrate_callback)(void*, uint64_t);
+    void* context;
+    uint64_t ullInitialEncodingBitrate;
+} ftl_adaptive_bitrate_thread_params_t;
+
+typedef struct
+{
+    SOCKET ingest_socket;
+    ftl_state_t state;
+    OS_MUTEX state_mutex;
+    OS_MUTEX disconnect_mutex;
+    char *ingest_hostname;
+    char ingest_ip[IPV4_ADDR_ASCII_LEN];//ipv4 only
+    uint32_t channel_id;
+    char *key;
+    char hmacBuffer[512];
+    int video_kbps;
+    char vendor_name[20];
+    char vendor_version[20];
+    OS_THREAD_HANDLE connection_thread;
+    OS_THREAD_HANDLE keepalive_thread;
+    OS_THREAD_HANDLE bitrate_monitor_thread;
+    OS_SEMAPHORE connection_thread_shutdown;
+    OS_SEMAPHORE keepalive_thread_shutdown;
+    OS_SEMAPHORE bitrate_thread_shutdown;
+    ftl_media_config_t media;
+    ftl_audio_component_t audio;
+    ftl_video_component_t video;
+    status_queue_t status_q;
+    ftl_ingest_t *ingest_list;
+    int ingest_count;
 }  ftl_stream_configuration_private_t;
 
-struct MemoryStruct {
-  char *memory;
-  size_t size;
+struct MemoryStruct
+{
+    char *memory;
+    size_t size;
 };
 
 /**
- * Charon always responses with a three digit response code after each command
- *
- * This enum holds defined number sequences
- **/
+* Charon always responses with a three digit response code after each command
+*
+* This enum holds defined number sequences
+**/
 
-typedef enum {
-  FTL_INGEST_RESP_UNKNOWN = 0,
-  FTL_INGEST_RESP_OK = 200,
-  FTL_INGEST_RESP_PING = 201,
-  FTL_INGEST_RESP_BAD_REQUEST= 400,//the handshake was not formatted correctly
-  FTL_INGEST_RESP_UNAUTHORIZED = 401,//this channel id is not authorized to stream
-  FTL_INGEST_RESP_OLD_VERSION = 402, //this ftl api version is no longer supported
-  FTL_INGEST_RESP_AUDIO_SSRC_COLLISION = 403,
-  FTL_INGEST_RESP_VIDEO_SSRC_COLLISION = 404,
-  FTL_INGEST_RESP_INVALID_STREAM_KEY = 405, //the corresponding channel does not match this key
-  FTL_INGEST_RESP_CHANNEL_IN_USE = 406, //the channel ID successfully authenticated however it is already actively streaming
-  FTL_INGEST_RESP_REGION_UNSUPPORTED = 407, //streaming from this country or region is not authorized by local governments
-  FTL_INGEST_RESP_NO_MEDIA_TIMEOUT = 408,
-  FTL_INGEST_RESP_INTERNAL_SERVER_ERROR = 500,
-  FTL_INGEST_RESP_INTERNAL_MEMORY_ERROR = 900,
-  FTL_INGEST_RESP_INTERNAL_COMMAND_ERROR = 901,
-  FTL_INGEST_RESP_INTERNAL_SOCKET_CLOSED = 902,
-  FTL_INGEST_RESP_INTERNAL_SOCKET_TIMEOUT = 903,
+typedef enum
+{
+    FTL_INGEST_RESP_UNKNOWN = 0,
+    FTL_INGEST_RESP_OK = 200,
+    FTL_INGEST_RESP_PING = 201,
+    FTL_INGEST_RESP_BAD_REQUEST = 400,//the handshake was not formatted correctly
+    FTL_INGEST_RESP_UNAUTHORIZED = 401,//this channel id is not authorized to stream
+    FTL_INGEST_RESP_OLD_VERSION = 402, //this ftl api version is no longer supported
+    FTL_INGEST_RESP_AUDIO_SSRC_COLLISION = 403,
+    FTL_INGEST_RESP_VIDEO_SSRC_COLLISION = 404,
+    FTL_INGEST_RESP_INVALID_STREAM_KEY = 405, //the corresponding channel does not match this key
+    FTL_INGEST_RESP_CHANNEL_IN_USE = 406, //the channel ID successfully authenticated however it is already actively streaming
+    FTL_INGEST_RESP_REGION_UNSUPPORTED = 407, //streaming from this country or region is not authorized by local governments
+    FTL_INGEST_RESP_NO_MEDIA_TIMEOUT = 408,
+    FTL_INGEST_RESP_INTERNAL_SERVER_ERROR = 500,
+    FTL_INGEST_RESP_INTERNAL_MEMORY_ERROR = 900,
+    FTL_INGEST_RESP_INTERNAL_COMMAND_ERROR = 901,
+    FTL_INGEST_RESP_INTERNAL_SOCKET_CLOSED = 902,
+    FTL_INGEST_RESP_INTERNAL_SOCKET_TIMEOUT = 903,
 } ftl_response_code_t;
 
 /**
- * Logs something to the FTL logs
- */
+* Logs something to the FTL logs
+*/
 
 #define FTL_LOG(ftl_handle, log_level, ...) ftl_log_msg (ftl_handle, log_level, __FILE__, __LINE__, __VA_ARGS__);
 void ftl_log_msg(ftl_stream_configuration_private_t *ftl, ftl_log_severity_t log_level, const char * file, int lineno, const char * fmt, ...);
 
 /**
- * Value to string conversion functions
- */
+* Value to string conversion functions
+*/
 
 const char * ftl_audio_codec_to_string(ftl_audio_codec_t codec);
 const char * ftl_video_codec_to_string(ftl_video_codec_t codec);
 
 /**
- * Functions related to the charon prootocol itself
- **/
+* Functions related to the charon prootocol itself
+**/
 
 int recv_all(SOCKET sock, char * buf, int buflen, const char line_terminator);
 
@@ -347,8 +375,8 @@ int ftl_read_response_code(const char * response_str);
 int ftl_read_media_port(const char *response_str);
 
 /**
- * Platform abstractions
- **/
+* Platform abstractions
+**/
 
 // FIXME: make this less global
 extern char error_message[1000];
