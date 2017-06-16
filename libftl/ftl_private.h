@@ -55,7 +55,7 @@
 #define MAX_KEY_LEN 100
 #define VIDEO_PTYPE 96
 #define AUDIO_PTYPE 97
-#define SOCKET_RECV_TIMEOUT_MS 2000
+#define SOCKET_RECV_TIMEOUT_MS 5000
 #define SOCKET_SEND_TIMEOUT_MS 1000
 #define KEEPALIVE_FREQUENCY_MS 5000
 #define MAX_PACKET_BUFFER 1500  //Max length of buffer
@@ -249,7 +249,8 @@ typedef struct {
   OS_MUTEX mutex;
   int assigned_port;
   OS_THREAD_HANDLE recv_thread;
-  OS_THREAD_HANDLE send_thread;
+  OS_THREAD_HANDLE video_send_thread;
+  OS_THREAD_HANDLE audio_send_thread;
   OS_THREAD_HANDLE ping_thread;
   OS_SEMAPHORE ping_thread_shutdown;
   int max_mtu;

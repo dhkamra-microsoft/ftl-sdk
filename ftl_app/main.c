@@ -68,7 +68,7 @@ int speedtest_duration = 0;
 int main(int argc, char **argv)
 {
   ftl_status_t status_code;
-
+  
   char *ingest_location = NULL;
   char *video_input = NULL;
   char *audio_input = NULL;
@@ -249,6 +249,8 @@ int main(int argc, char **argv)
   int end_of_frame;
 
   gettimeofday(&proc_start_tv, NULL);
+  struct timeval frameTime;
+  gettimeofday(&frameTime, NULL); // NOTE! In a real app these timestamps should come from the samples!
 
   while (!ctrlc_pressed())
   {
@@ -263,8 +265,6 @@ int main(int argc, char **argv)
     continue;
     }
 
-    struct timeval frameTime;
-    gettimeofday(&frameTime, NULL); // NOTE! In a real app these timestamps should come from the samples!
     if (get_video_frame(&h264_handle, h264_frame, &len, &end_of_frame) == 0)
     {
       continue;
@@ -287,9 +287,9 @@ int main(int argc, char **argv)
 
     nalu_type = h264_frame[0] & 0x1F;
 
-    /*this wont work if there are multiple nalu's per frame...need to pull out frame number from slice header to be more robust*/
-    if (nalu_type == 1 || nalu_type == 5)
+    if (end_of_frame)
     {
+      gettimeofday(&frameTime, NULL); // NOTE! In a real app these timestamps should come from the samples!
       gettimeofday(&proc_end_tv, NULL);
       timeval_subtract(&proc_delta_tv, &proc_end_tv, &proc_start_tv);
 
