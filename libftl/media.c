@@ -1687,7 +1687,6 @@ ftl_status_t ftl_adaptive_bitrate_thread(ftl_handle_t* ftl_handle, void* context
     ftl_status_t ret_status = FTL_SUCCESS;
     ftl_stream_configuration_private_t *ftl = (ftl_stream_configuration_private_t *)ftl_handle->priv;
     ftl_adaptive_bitrate_thread_params_t* thread_params = NULL;
-    ftl->bitrate_thread_shutdown = NULL;
 
     do
     {
@@ -1714,6 +1713,9 @@ ftl_status_t ftl_adaptive_bitrate_thread(ftl_handle_t* ftl_handle, void* context
         if ((os_create_thread(&ftl->bitrate_monitor_thread, NULL, adaptive_bitrate_thread, thread_params)) != 0)
         {
             ftl_clear_state(ftl, FTL_BITRATE_THRD);
+            // delete semaphore
+            os_semaphore_delete(&ftl->bitrate_thread_shutdown);
+
             ret_status = FTL_MALLOC_FAILURE;
         }
     } while (0);
@@ -1721,10 +1723,6 @@ ftl_status_t ftl_adaptive_bitrate_thread(ftl_handle_t* ftl_handle, void* context
     if (ret_status != FTL_SUCCESS)
     {
         free(thread_params);
-        if (ftl->bitrate_thread_shutdown != NULL)
-        {
-            os_semaphore_delete(&ftl->bitrate_thread_shutdown);
-        }
     }
     return ret_status;
 }
