@@ -1657,7 +1657,7 @@ BOOL is_bw_stable(const uint64_t nacks_received, const uint64_t frames_sent, con
     float ratio_nacks_received_to_packets_sent = (float)nacks_received / (float)frames_sent;
     if (ratio_nacks_received_to_packets_sent < c_fMaxNacksReceivedToPacketsSentRatioForBitrateUpgrade && avg_rtt < 20)
     {
-        return FALSE;
+        return TRUE;
     }
     return FALSE;
 }
