@@ -185,7 +185,8 @@ typedef enum
     FTL_STATUS_VIDEO,
     FTL_STATUS_AUDIO,
     FTL_STATUS_FRAMES_DROPPED,
-    FTL_STATUS_NETWORK
+    FTL_STATUS_NETWORK,
+    FTL_STATUS_BITRATE_CHANGED_EVENT
 } ftl_status_types_t;
 
 typedef enum
