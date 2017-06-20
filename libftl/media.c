@@ -1675,9 +1675,9 @@ int compute_recommended_bitrate_percentage(
         recommended_bitrate_percentage = ulMinRecommendedBitratePercentage;
     }
 
-    if (recommended_bitrate_percentage > 100)
+    if (recommended_bitrate_percentage > 120)
     {
-        recommended_bitrate_percentage = 100;
+        recommended_bitrate_percentage = 120;
     }
     return recommended_bitrate_percentage;
 }
