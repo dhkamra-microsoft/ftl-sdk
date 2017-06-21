@@ -1649,7 +1649,7 @@ BOOL is_bitrate_reduction_required(const uint64_t nacks_received, const uint64_t
 }
 
 // Bandwidth is deemed stable if nacks to frames ratio is  lesser than max permissible limit.
-BOOL is_bw_stable(const uint64_t nacks_received, const uint64_t frames_sent, const uint64_t avg_rtt, const int avg_frames_dropped_per_second)
+BOOL is_bw_stable(const uint64_t nacks_received, const uint64_t frames_sent, const uint64_t avg_rtt, const uint64_t avg_frames_dropped_per_second)
 {
     if (frames_sent == 0)
     {
@@ -1689,7 +1689,6 @@ ftl_status_t ftl_adaptive_bitrate_thread(ftl_handle_t* ftl_handle, void* context
     ftl_status_t ret_status = FTL_SUCCESS;
     ftl_stream_configuration_private_t *ftl = (ftl_stream_configuration_private_t *)ftl_handle->priv;
     ftl_adaptive_bitrate_thread_params_t* thread_params = NULL;
-    ftl->bitrate_thread_shutdown = NULL;
 
     do
     {
@@ -1716,6 +1715,7 @@ ftl_status_t ftl_adaptive_bitrate_thread(ftl_handle_t* ftl_handle, void* context
         if ((os_create_thread(&ftl->bitrate_monitor_thread, NULL, adaptive_bitrate_thread, thread_params)) != 0)
         {
             ftl_clear_state(ftl, FTL_BITRATE_THRD);
+            os_semaphore_delete(&ftl->bitrate_thread_shutdown);
             ret_status = FTL_MALLOC_FAILURE;
         }
     } while (0);
@@ -1723,10 +1723,6 @@ ftl_status_t ftl_adaptive_bitrate_thread(ftl_handle_t* ftl_handle, void* context
     if (ret_status != FTL_SUCCESS)
     {
         free(thread_params);
-        if (ftl->bitrate_thread_shutdown != NULL)
-        {
-            os_semaphore_delete(&ftl->bitrate_thread_shutdown);
-        }
     }
     return ret_status;
 }
