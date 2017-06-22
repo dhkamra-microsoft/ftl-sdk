@@ -81,6 +81,41 @@
 #define PING_PTYPE 250
 #define SENDER_REPORT_PTYPE 200
 
+// Adaptive bitrate constants
+
+// If the ratio of nacks received to packets sent is greater than the following value, we request a bitrate downgrade.
+#define MIN_NACKS_RECEIVED_TO_PACKETS_SENT_RATIO_FOR_BITRATE_DOWNGRADE 0.1
+
+// Duration at which we capture stream stats , i.e frames sent and nacks received
+#define STREAM_STATS_CAPTURE_MS 1000
+
+// Duration over which we evaluate whether we need to downgrade/upgrade bitrate. Note that we 
+// look at stats over the last c_ulBwCheckDurationMs milliseconds, every c_ulStreamStatsCaptureMs milliseconds.
+#define BW_CHECK_DURATION_MS 5000
+
+// Interval to wait for bw test after we update bitrate.
+#define BITRATE_CHANGED_COOLDOWN_INTERVAL_MS 10000
+
+// Percentage to reduce the bitrate by if bandwidth seems too constrained
+#define BW_INSUFFICIENT_BITRATE_DOWNGRADE_PERCENTAGE 30
+
+// Percentange to reduce the bitrate by if bw upgrade was too excessive
+#define REVERT_TO_STABLE_BITRATE_DOWNGRADE_PERCENTAGE 10
+
+// Percentage to increase bitrate by if conditions look ideal
+#define BW_IDEAL_BITRATE_UPGRADE_PERCENTAGE 5
+
+// If ratio of nacks received to packets sent is below the following value bitrate update can be requested
+#define MAX_NACKS_RECEIVED_TO_PACKETS_SENT_RATIO_FORBITRATE_UPGRADE 0.01
+
+// If bandwidth is constrained within MaxBitrateUpgradeExcessiveSeconds after bitrate update, revert to last stable bitrate.
+#define MAX_MS_TO_DEEM_UPGRADE_EXCESSIVE 60000
+
+// If bitrate upgrade was excessive we freeze bitrate upgrade for the next c_bitrateUpgradeFreezeTimeMs milliseconds.
+#define BITRATE_UPGRADE_FREEZE_TIME_MS 600000 // 10*60*1000
+
+#define MAX_STAT_SIZE 5
+
 #ifndef _WIN32
 #define strncpy_s(dst, dstsz, src, cnt) strncpy(dst, src, cnt)
 #define sprintf_s(buf, bufsz, fmt, ...) sprintf(buf, fmt, __VA_ARGS__)

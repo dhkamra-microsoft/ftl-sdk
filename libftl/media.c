@@ -1,5 +1,6 @@
 #include "ftl.h"
 #include "ftl_private.h"
+#include <assert.h>
 
 #define MAX_RTT_FACTOR 1.3
 #define USEC_IN_SEC 1000000
@@ -1600,39 +1601,6 @@ ftl_status_t ftl_get_video_stats(ftl_handle_t* handle, uint64_t* frames_sent, ui
 
 // ================================================ Bitrate Monitor Logic =================================================== //
 
-// If the ratio of nacks received to packets sent is greater than the following value, we request a bitrate downgrade.
-static const double c_fMinNacksReceivedToPacketsSentRatioForBitrateDowngrade = 0.1;
-
-// Duration at which we capture stream stats , i.e frames sent and nacks received
-static const uint32_t c_ulStreamStatsCaptureMs = 1000;
-
-// Duration over which we evaluate whether we need to downgrade/upgrade bitrate. Note that we 
-// look at stats over the last c_ulBwCheckDurationMs milliseconds, every c_ulStreamStatsCaptureMs milliseconds.
-static const uint32_t c_ulBwCheckDurationMs = 5000;
-
-// Interval to wait for bw test after we update bitrate.
-static const uint32_t c_ulBitrateChangedCooldownIntervalMs = 10000;
-
-// Percentage to reduce the bitrate by if bandwidth seems too constrained
-static const int c_iBwInsufficientBitrateDowngradePercentage = 30;
-
-// Percentange to reduce the bitrate by if bw upgrade was too excessive
-static const int c_iRevertToStableBitrateDowngradePercentage = 10;
-
-// Percentage to increase bitrate by if conditions look ideal
-static const int c_iBwIdealBitrateUpgradePercentage = 5;
-
-// If ratio of nacks received to packets sent is below the following value bitrate update can be requested
-static const double c_fMaxNacksReceivedToPacketsSentRatioForBitrateUpgrade = 0.01;
-
-// If bandwidth is constrained within MaxBitrateUpgradeExcessiveSeconds after bitrate update, revert to last stable bitrate.
-static const int c_iMaxMsToDeemBitrateUpgradeExcessive = 60 * 1000;
-
-// If bitrate upgrade was excessive we freeze bitrate upgrade for the next c_bitrateUpgradeFreezeTimeMs milliseconds.
-static const uint32_t c_uBitrateUpgradeFreezeTimeMs = 10 * 60 * 1000;
-
-static const uint32_t c_uMaxStatSize = 5;
-
 BOOL is_bitrate_reduction_required(const uint64_t nacks_received, const uint64_t packets_sent, const uint64_t avg_rtt, const int avg_frames_dropped_per_second)
 {
     if (packets_sent == 0)
@@ -1641,7 +1609,7 @@ BOOL is_bitrate_reduction_required(const uint64_t nacks_received, const uint64_t
     }
 
     float ratio_nacks_received_to_packets_sent = (float)nacks_received / (float)packets_sent;
-    if (ratio_nacks_received_to_packets_sent > c_fMinNacksReceivedToPacketsSentRatioForBitrateDowngrade || avg_frames_dropped_per_second > 3)
+    if (ratio_nacks_received_to_packets_sent > MIN_NACKS_RECEIVED_TO_PACKETS_SENT_RATIO_FOR_BITRATE_DOWNGRADE || avg_frames_dropped_per_second > 3)
     {
         return TRUE;
     }
@@ -1657,7 +1625,7 @@ BOOL is_bw_stable(const uint64_t nacks_received, const uint64_t frames_sent, con
     }
 
     float ratio_nacks_received_to_packets_sent = (float)nacks_received / (float)frames_sent;
-    if (ratio_nacks_received_to_packets_sent < c_fMaxNacksReceivedToPacketsSentRatioForBitrateUpgrade && avg_frames_dropped_per_second == 0)
+    if (ratio_nacks_received_to_packets_sent < MAX_NACKS_RECEIVED_TO_PACKETS_SENT_RATIO_FORBITRATE_UPGRADE && avg_frames_dropped_per_second == 0)
     {
         return TRUE;
     }
@@ -1677,9 +1645,9 @@ int compute_recommended_bitrate_percentage(
         recommended_bitrate_percentage = ulMinRecommendedBitratePercentage;
     }
 
-    if (recommended_bitrate_percentage > 150)
+    if (recommended_bitrate_percentage > 300)
     {
-        recommended_bitrate_percentage = 150;
+        recommended_bitrate_percentage = 300;
     }
     return recommended_bitrate_percentage;
 }
@@ -1732,13 +1700,16 @@ OS_THREAD_ROUTINE adaptive_bitrate_thread(void* data)
     ftl_adaptive_bitrate_thread_params_t *params = (ftl_adaptive_bitrate_thread_params_t *)data;
     ftl_stream_configuration_private_t* ftl = (ftl_stream_configuration_private_t*)params->handle->priv;
 
+    assert(MAX_STAT_SIZE == BW_CHECK_DURATION_MS / STREAM_STATS_CAPTURE_MS);
+
     FTL_LOG(params->handle->priv, FTL_LOG_INFO, "Starting adaptive bitrate thread");
 
-    // Circular buffers to hold bw stats data queried via ftl.
-    uint64_t nacks_received[5];
-    uint64_t frames_sent[5];
-    uint64_t rtts_received[5];
-    uint64_t frames_dropped[5];
+    // Circular buffers to hold bw stats data queried via ftl_get_video_params.
+    // The stats data shows data aggregated over the last c_ulBwCheckDurationMs milliseconds.
+    uint64_t nacks_received[MAX_STAT_SIZE] = {0};
+    uint64_t frames_sent[MAX_STAT_SIZE] = {0};
+    uint64_t rtts_received[MAX_STAT_SIZE] = {0};
+    uint64_t frames_dropped[MAX_STAT_SIZE] = {0};
 
     uint32_t current_position_of_circular_buffer = 0;
     BOOL circular_buffer_is_full = FALSE;
@@ -1750,9 +1721,9 @@ OS_THREAD_ROUTINE adaptive_bitrate_thread(void* data)
     // Current bitrate encoding as a percentage of the original encoding bitrate.
     uint16_t current_encoding_bitrate_percentage = 100;
 
-    struct timeval last_bitrate_upgrade_time, bw_upgrade_freeze_time;
+    struct timeval last_bitrate_upgrade_time, bw_upgrade_freeze_start_time;
     gettimeofday(&last_bitrate_upgrade_time, NULL);
-    bw_upgrade_freeze_time = (struct timeval) { 0 };
+    bw_upgrade_freeze_start_time = (struct timeval) { 0 };
 
     BOOL bitrate_changed = FALSE;
     BOOL attempt_to_revert_to_stable_bandwidth_first = FALSE;
@@ -1761,7 +1732,7 @@ OS_THREAD_ROUTINE adaptive_bitrate_thread(void* data)
     //  bitrate is only deemed stable when we reach back to original bitrate, or when we revert to a bitrate after an excessive upgrade.
     BOOL check_bitrate_for_stability = FALSE;
 
-    while (1)
+    while (os_semaphore_pend(&ftl->bitrate_thread_shutdown, BITRATE_CHANGED_COOLDOWN_INTERVAL_MS) == -1)
     {
         uint64_t nacks_received_recorded = 0;
         uint64_t frames_sent_recorded = 0;
@@ -1769,6 +1740,7 @@ OS_THREAD_ROUTINE adaptive_bitrate_thread(void* data)
         uint64_t frames_dropped_recorded = 0;
 
         ftl_get_video_stats(params->handle, &frames_sent_recorded, &nacks_received_recorded, &rtt_received, &frames_dropped_recorded);
+
         FTL_LOG(params->handle->priv, FTL_LOG_INFO, "Fetched new stats frames dropped %d", frames_dropped_recorded);
         uint64_t nacks_received_since_last_check = nacks_received_recorded - last_nacks_received_recorded;
         uint64_t frames_sent_since_last_check = frames_sent_recorded - last_frames_sent_recorded;
@@ -1784,12 +1756,12 @@ OS_THREAD_ROUTINE adaptive_bitrate_thread(void* data)
         frames_dropped[current_position_of_circular_buffer] = frames_dropped_since_last_check;
 
         // Once circular buffer is full, set the flag as we now have enough data to check bandwidth is constrained.
-        if (current_position_of_circular_buffer + 1 >= c_uMaxStatSize)
+        if (current_position_of_circular_buffer + 1 >= MAX_STAT_SIZE)
         {
             circular_buffer_is_full = TRUE;
         }
         // Update position in circular buffer.
-        current_position_of_circular_buffer = (current_position_of_circular_buffer + 1) % c_uMaxStatSize;
+        current_position_of_circular_buffer = (current_position_of_circular_buffer + 1) % MAX_STAT_SIZE;
 
         // This conditions ensures that we have stats of the last c_ulBwCheckDurationMs milliseconds.
         if (circular_buffer_is_full)
@@ -1802,28 +1774,27 @@ OS_THREAD_ROUTINE adaptive_bitrate_thread(void* data)
             uint64_t avg_frames_dropped_per_second = 0;
 
             // Count all nacks received for the last c_ulBwCheckDurationMs milliseconds
-            for (int i = 0; i < 5; i++)
+            for (int i = 0; i < MAX_STAT_SIZE; i++)
             {
                 nacks_received_total += nacks_received[i];
             }
             // Count all frames sent over the last c_ulBwCheckDurationMs milliseconds
-            for (int i = 0; i< 5; i++)
+            for (int i = 0; i< MAX_STAT_SIZE; i++)
             {
                 frames_sent_total += frames_sent[i];
             }
 
-            for (int i = 0; i< 5; i++)
+            for (int i = 0; i< MAX_STAT_SIZE; i++)
             {
                 total_rtt += rtts_received[i];
             }
-            avg_rtt = total_rtt / 5;
+            avg_rtt = total_rtt / MAX_STAT_SIZE;
 
-            for (int i = 0; i < 5; i++)
+            for (int i = 0; i < MAX_STAT_SIZE; i++)
             {
                 frames_dropped_total += frames_dropped[i];
             }
-
-            avg_frames_dropped_per_second = frames_dropped_total / 5;
+            avg_frames_dropped_per_second = (frames_dropped_total / BW_CHECK_DURATION_MS) * 1000;
 
             FTL_LOG(params->handle->priv, FTL_LOG_INFO, "Current stats. Nacks Received %d , Frames Sent %d rtt %d frames dropped %d", nacks_received_total, frames_sent_total, avg_rtt, avg_frames_dropped_per_second);
             // Check if bandwidth is constrained and bitrate reduction is required. The bandwidth can be constrained for two reasons.
@@ -1835,26 +1806,27 @@ OS_THREAD_ROUTINE adaptive_bitrate_thread(void* data)
                 // If we had previously upgraded the bitrate and we started seeing the 
                 // constrain within c_iMaxSecondsToDeemBitrateUpgradeExcessive seconds, it means our bitrate upgrade was excessiver. 
                 // we should revert back to a lower bitrate and freeze all upgrades for c_uBitrateUpgradeFreezeTimeMs milliseconds.
-                if (attempt_to_revert_to_stable_bandwidth_first && get_ms_elapsed_since(&last_bitrate_upgrade_time) < c_iMaxMsToDeemBitrateUpgradeExcessive)
+                if (attempt_to_revert_to_stable_bandwidth_first && get_ms_elapsed_since(&last_bitrate_upgrade_time) < MAX_MS_TO_DEEM_UPGRADE_EXCESSIVE)
                 {
                     FTL_LOG(params->handle->priv, FTL_LOG_INFO, "Reverting to a stable bitrate and freezing upgrade");
-                    uint32_t recommended_bitrate_percentage = compute_recommended_bitrate_percentage(current_encoding_bitrate_percentage, -1 * c_iRevertToStableBitrateDowngradePercentage);
+                    uint32_t recommended_bitrate_percentage = compute_recommended_bitrate_percentage(current_encoding_bitrate_percentage, -1 * REVERT_TO_STABLE_BITRATE_DOWNGRADE_PERCENTAGE);
                     uint64_t recommended_bitrate = (recommended_bitrate_percentage*params->ullInitialEncodingBitrate) / 100;
+
                     BOOL changeBitrateResult = params->change_bitrate_callback(params->context, recommended_bitrate);
 
                     if (changeBitrateResult)
                     {
                         bitrate_changed = TRUE;
                         check_bitrate_for_stability = TRUE;
-                        attempt_to_revert_to_stable_bandwidth_first = TRUE;
+                        attempt_to_revert_to_stable_bandwidth_first = FALSE;
                         current_encoding_bitrate_percentage = recommended_bitrate_percentage;
-                        gettimeofday(&bw_upgrade_freeze_time, NULL);
+                        gettimeofday(&bw_upgrade_freeze_start_time, NULL);
                     }
                 }
                 // This means the available bandiwdth seems to have decreased and we need to reduce our bitrate to comply.
                 else
                 {
-                    uint32_t recommended_bitrate_percentage = compute_recommended_bitrate_percentage(current_encoding_bitrate_percentage, -1 * c_iBwInsufficientBitrateDowngradePercentage);
+                    uint32_t recommended_bitrate_percentage = compute_recommended_bitrate_percentage(current_encoding_bitrate_percentage, -1 * BW_INSUFFICIENT_BITRATE_DOWNGRADE_PERCENTAGE);
                     uint64_t recommended_bitrate = (recommended_bitrate_percentage*params->ullInitialEncodingBitrate) / 100;
                     BOOL changeBitrateResult = params->change_bitrate_callback(params->context, recommended_bitrate);
                     // We had to lower bitrate. Bitrate is not stable.
@@ -1877,16 +1849,16 @@ OS_THREAD_ROUTINE adaptive_bitrate_thread(void* data)
             // bitrate upgrade in the last BwUpgradeFreezeTime millisecods, we upgrade the bitrate.
             else if (is_bw_stable(nacks_received_total, frames_sent_total, avg_rtt, avg_frames_dropped_per_second))
             {
-                if (get_ms_elapsed_since(&bw_upgrade_freeze_time) > 180000)
+                if (get_ms_elapsed_since(&bw_upgrade_freeze_start_time) > 180000)
                 {
-                    uint32_t recommended_bitrate_percentage = compute_recommended_bitrate_percentage(current_encoding_bitrate_percentage, c_iBwIdealBitrateUpgradePercentage);
+                    uint32_t recommended_bitrate_percentage = compute_recommended_bitrate_percentage(current_encoding_bitrate_percentage, BW_IDEAL_BITRATE_UPGRADE_PERCENTAGE);
                     if (recommended_bitrate_percentage != current_encoding_bitrate_percentage)
                     {
                         attempt_to_revert_to_stable_bandwidth_first = TRUE;
 
                         uint64_t ullRecommendedBitrate = (recommended_bitrate_percentage*params->ullInitialEncodingBitrate) / 100;
-                        BOOL localHr = params->change_bitrate_callback(params->context, ullRecommendedBitrate);
-                        if (localHr)
+                        BOOL changeBitrateResult = params->change_bitrate_callback(params->context, ullRecommendedBitrate);
+                        if (changeBitrateResult)
                         {
                             //GetCBIProxyInstance().InstrumentBitrateChanged(
                             //    BIEvent::IncreaseBitrate(),
@@ -1916,7 +1888,7 @@ OS_THREAD_ROUTINE adaptive_bitrate_thread(void* data)
                 current_position_of_circular_buffer = 0;
                 // Sleep for a c_ulBitrateChangedCooldownIntervalMs period. If hBroadcastTerminated signal is received exit.
 
-                if (os_semaphore_pend(&ftl->bitrate_thread_shutdown, c_ulBitrateChangedCooldownIntervalMs) != -1)
+                if (os_semaphore_pend(&ftl->bitrate_thread_shutdown, BITRATE_CHANGED_COOLDOWN_INTERVAL_MS) != -1)
                 {
                     break;
                 }
@@ -1958,7 +1930,7 @@ OS_THREAD_ROUTINE adaptive_bitrate_thread(void* data)
         }
 
         // Sleep for c_ulStreamStatsCaptureMs before capturing the next stats
-        if (os_semaphore_pend(&ftl->bitrate_thread_shutdown, c_ulStreamStatsCaptureMs) != -1)
+        if (os_semaphore_pend(&ftl->bitrate_thread_shutdown, STREAM_STATS_CAPTURE_MS) != -1)
         {
             break;
         }
