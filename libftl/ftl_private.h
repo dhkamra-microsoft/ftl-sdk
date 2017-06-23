@@ -137,6 +137,13 @@ typedef enum
 
 typedef enum
 {
+    BANDWIDTH_CONSTRAINED,
+    BANDWIDTH_AVAILABLE,
+    UPGRADE_EXCESSIVE
+} bitrate_change_reason;
+
+typedef enum
+{
     FTL_CONNECTED = 0x0001,
     FTL_MEDIA_READY = 0x0002,
     FTL_STATUS_QUEUE = 0x0004,

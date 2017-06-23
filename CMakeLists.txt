@@ -27,7 +27,7 @@ add_subdirectory(libcurl)
 SET(CURL_INCLUDE_DIRS libcurl/include ${CMAKE_CURRENT_BINARY_DIR}/libcurl/include/curl)
 SET(CURL_LIBRARIES libcurl)
 endif()
-MESSAGE( STATUS "Curl include dir: " ${CURL_INCLUDE_DIRS}) 
+MESSAGE( STATUS "Curl include dir: " ${CURL_INCLUDE_DIRS})
 include_directories(${CURL_INCLUDE_DIRS})
 
 if (NOT DISABLE_AUTO_INGEST)
@@ -91,7 +91,7 @@ add_executable(ftl_app
                ftl_app/main.c
                ftl_app/main.h
                ftl_app/file_parser.c
-               ftl_app/file_parser.h			   
+               ftl_app/file_parser.h
                ftl_app/gettimeofday.c
 	           ftl_app/gettimeofday.h
 			   ftl_app/bitstream.c
