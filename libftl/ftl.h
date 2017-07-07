@@ -185,7 +185,8 @@ typedef enum
     FTL_STATUS_VIDEO,
     FTL_STATUS_AUDIO,
     FTL_STATUS_FRAMES_DROPPED,
-    FTL_STATUS_NETWORK
+    FTL_STATUS_NETWORK,
+    FTL_BITRATE_CHANGED
 } ftl_status_types_t;
 
 typedef enum
@@ -251,6 +252,31 @@ typedef struct
     int max_frame_size;
 }ftl_video_frame_stats_msg_t;
 
+typedef enum
+{
+    FTL_BITRATE_DECREASED,
+    FTL_BITRATE_INCREASED,
+    FTL_BITRATE_STABILIZED
+}ftl_bitrate_changed_type_t;
+
+typedef enum
+{
+     FTL_BANDWIDTH_CONSTRAINED,
+     FTL_UPGRADE_EXCESSIVE,
+     FTL_BANDWIDTH_AVAILABLE,
+     FTL_STABILIZE_ON_LOWER_BITRATE,
+     FTL_STABILIZE_ON_ORIGINAL_BITRATE,
+} ftl_bitrate_changed_reason_t;
+
+typedef struct
+{
+    ftl_bitrate_changed_type_t bitrate_changed_type;
+    ftl_bitrate_changed_reason_t bitrate_changed_reason;
+    uint64_t current_encoding_bitrate;
+    uint64_t previous_encoding_bitrate;
+    float nacks_to_frames_ratio;
+} ftl_bitrate_changed_msg_t;
+
 /*status messages*/
 typedef struct
 {
@@ -262,6 +288,7 @@ typedef struct
         ftl_packet_stats_msg_t pkt_stats;
         ftl_packet_stats_instant_msg_t ipkt_stats;
         ftl_video_frame_stats_msg_t video_stats;
+        ftl_bitrate_changed_msg_t bitrate_changed_msg;
     } msg;
 }ftl_status_msg_t;
 

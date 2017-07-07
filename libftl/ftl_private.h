@@ -96,14 +96,14 @@
 // Interval to wait for bw test after we update bitrate.
 #define BITRATE_CHANGED_COOLDOWN_INTERVAL_MS 10000
 
-// Percentage to reduce the bitrate by if bandwidth seems too constrained
-#define BW_INSUFFICIENT_BITRATE_DOWNGRADE_PERCENTAGE 30
+// Percentage to reduce the bitrate to if bandwidth seems too constrained
+#define BW_INSUFFICIENT_BITRATE_DOWNGRADE_PERCENTAGE 70
 
-// Percentange to reduce the bitrate by if bw upgrade was too excessive
-#define REVERT_TO_STABLE_BITRATE_DOWNGRADE_PERCENTAGE 10
+// Percentange to reduce the bitrate to if bw upgrade was too excessive
+#define REVERT_TO_STABLE_BITRATE_DOWNGRADE_PERCENTAGE 80
 
 // Percentage to increase bitrate by if conditions look ideal
-#define BW_IDEAL_BITRATE_UPGRADE_PERCENTAGE 5
+#define BW_IDEAL_BITRATE_UPGRADE_BPS 256000;
 
 // If ratio of nacks received to packets sent is below the following value bitrate update can be requested
 #define MAX_NACKS_RECEIVED_TO_PACKETS_SENT_RATIO_FORBITRATE_UPGRADE 0.01
@@ -113,6 +113,9 @@
 
 // If bitrate upgrade was excessive we freeze bitrate upgrade for the next c_bitrateUpgradeFreezeTimeMs milliseconds.
 #define BITRATE_UPGRADE_FREEZE_TIME_MS 600000 // 10*60*1000
+
+#define MAX_SUPPORTED_BITRATE_BPS 5000000 // 5*1000*1000
+#define MIN_SUPPORTED_BITRATE_BPS 512000 // 512*1000
 
 #define MAX_STAT_SIZE 5
 
@@ -124,8 +127,7 @@
 #define sscanf_s sscanf
 #endif
 
-typedef enum
-{
+typedef enum {
     H264_NALU_TYPE_NON_IDR = 1,
     H264_NALU_TYPE_IDR = 5,
     H264_NALU_TYPE_SEI = 6,
@@ -142,8 +144,7 @@ typedef enum
     UPGRADE_EXCESSIVE
 } bitrate_change_reason;
 
-typedef enum
-{
+typedef enum {
     FTL_CONNECTED = 0x0001,
     FTL_MEDIA_READY = 0x0002,
     FTL_STATUS_QUEUE = 0x0004,
@@ -170,14 +171,12 @@ typedef bool BOOL;
 #endif
 
 /*status message queue*/
-typedef struct _status_queue_t
-{
+typedef struct _status_queue_t {
     ftl_status_msg_t stats_msg;
     struct _status_queue_t *next;
 }status_queue_elmt_t;
 
-typedef struct
-{
+typedef struct {
     status_queue_elmt_t *head;
     int count;
     int thread_waiting;
@@ -190,8 +189,7 @@ typedef struct
 * as the authetication keys and other similar information. It's members are
 * private and not to be directly manipulated
 */
-typedef struct
-{
+typedef struct {
     uint8_t packet[MAX_PACKET_BUFFER];
     int len;
     struct timeval insert_time;
@@ -202,14 +200,12 @@ typedef struct
     OS_MUTEX mutex;
 }nack_slot_t;
 
-typedef struct _ping_pkt_t
-{
+typedef struct _ping_pkt_t {
     uint32_t header;
     struct timeval xmit_time;
 }ping_pkt_t;
 
-typedef struct _senderReport_pkt_t
-{
+typedef struct _senderReport_pkt_t {
     uint32_t header;
     uint32_t ssrc;
     uint32_t ntpTimestampHigh;
@@ -219,8 +215,7 @@ typedef struct _senderReport_pkt_t
     uint32_t senderOctetCount;
 }senderReport_pkt_t;
 
-typedef struct
-{
+typedef struct {
     struct timeval start_time;
     int64_t frames_received;
     int64_t frames_sent;
@@ -246,8 +241,7 @@ typedef struct
     int max_frame_size;
 }media_stats_t;
 
-typedef struct
-{
+typedef struct {
     uint8_t payload_type;
     uint32_t ssrc;
     uint32_t timestamp;
@@ -273,8 +267,7 @@ typedef struct
     OS_SEMAPHORE pkt_ready;
 }ftl_media_component_common_t;
 
-typedef struct
-{
+typedef struct {
     ftl_audio_codec_t codec;
     int64_t dts_usec;
     ftl_media_component_common_t media_component;
@@ -282,8 +275,7 @@ typedef struct
     BOOL is_ready_to_send;
 } ftl_audio_component_t;
 
-typedef struct
-{
+typedef struct {
     ftl_video_codec_t codec;
     uint32_t height;
     uint32_t width;
@@ -298,8 +290,7 @@ typedef struct
     BOOL has_sent_first_frame;
 } ftl_video_component_t;
 
-typedef struct
-{
+typedef struct {
     struct sockaddr_in server_addr;
     SOCKET media_socket;
     OS_MUTEX mutex;
@@ -315,8 +306,7 @@ typedef struct
     struct timeval sender_report_base_ntp;
 } ftl_media_config_t;
 
-typedef struct _ftl_ingest_t
-{
+typedef struct _ftl_ingest_t {
     char name[30];
     char ip[IPV4_ADDR_ASCII_LEN];
     int rtt;
@@ -331,8 +321,7 @@ typedef struct
     uint64_t ullInitialEncodingBitrate;
 } ftl_adaptive_bitrate_thread_params_t;
 
-typedef struct
-{
+typedef struct {
     SOCKET ingest_socket;
     ftl_state_t state;
     OS_MUTEX state_mutex;
@@ -359,8 +348,7 @@ typedef struct
     int ingest_count;
 }  ftl_stream_configuration_private_t;
 
-struct MemoryStruct
-{
+struct MemoryStruct {
     char *memory;
     size_t size;
 };
@@ -371,8 +359,7 @@ struct MemoryStruct
 * This enum holds defined number sequences
 **/
 
-typedef enum
-{
+typedef enum {
     FTL_INGEST_RESP_UNKNOWN = 0,
     FTL_INGEST_RESP_OK = 200,
     FTL_INGEST_RESP_PING = 201,
